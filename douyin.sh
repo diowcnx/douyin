@@ -26,61 +26,22 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
-# ฟังก์ชันตรวจสอบความพร้อมของ Environment
+# ฟังก์ชันตรวจสอบความพร้อมของ Environment (หากยังไม่ติดตั้งจะติดตั้งให้อัตโนมัติ)
 ensure_environment() {
+    local need_setup=false
+
     if [ ! -f "$PYTHON" ]; then
-        echo -e "${YELLOW}⚙️  ยังไม่พบ Virtual Environment กำลังสร้างและติดตั้งแพ็กเกจที่จำเป็น...${NC}"
-        python3 -m venv "$VENV_DIR"
-        "$VENV_DIR/bin/pip" install --upgrade pip
-        "$VENV_DIR/bin/pip" install -r requirements.txt
-        "$VENV_DIR/bin/pip" install playwright
-        "$VENV_DIR/bin/python" -m playwright install chromium
-        echo -e "${GREEN}✓ ติดตั้งสำเร็จเรียบร้อย!${NC}\n"
+        need_setup=true
+    elif ! "$PYTHON" -c "import aiohttp, rich, yaml, playwright" >/dev/null 2>&1; then
+        need_setup=true
+    elif [ ! -f "$SCRIPT_DIR/config.yml" ]; then
+        need_setup=true
     fi
 
-    if [ ! -f "$SCRIPT_DIR/config.yml" ]; then
-        if [ -f "$SCRIPT_DIR/config.example.yml" ]; then
-            cp "$SCRIPT_DIR/config.example.yml" "$SCRIPT_DIR/config.yml"
-        fi
+    if [ "$need_setup" = true ]; then
+        echo -e "${YELLOW}⚙️  ตรวจพบว่าระบบยังติดตั้งไม่เสร็จสิ้น กำลังเริ่มการติดตั้งอัตโนมัติ...${NC}"
+        bash "$SCRIPT_DIR/setup.sh"
     fi
-
-    # ตรวจสอบว่ามีคุกกี้พื้นฐาน (ttwid) แล้วหรือยัง หากยังไม่มีให้ดึงอัตโนมัติ
-    "$PYTHON" -c "
-import asyncio, yaml
-from pathlib import Path
-
-cfg_path = Path('config.yml')
-need_cookies = True
-if cfg_path.exists():
-    with open(cfg_path, 'r', encoding='utf-8') as f:
-        cfg = yaml.safe_load(f) or {}
-    cookies = cfg.get('cookies') or {}
-    if 'ttwid' in cookies and cookies['ttwid']:
-        need_cookies = False
-
-if need_cookies:
-    print('🔄 กำลังดึง Token / Cookies เริ่มต้นจาก Douyin อัตโนมัติ...')
-    from playwright.async_api import async_playwright
-    async def fetch():
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(
-                user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
-            )
-            page = await context.new_page()
-            await page.goto('https://www.douyin.com/', wait_until='commit')
-            await asyncio.sleep(4)
-            cookies = await context.cookies()
-            c_dict = {c['name']: c['value'] for c in cookies if 'douyin.com' in c['domain']}
-            await browser.close()
-            with open('config.yml', 'r', encoding='utf-8') as f:
-                c = yaml.safe_load(f) or {}
-            c['cookies'] = c_dict
-            with open('config.yml', 'w', encoding='utf-8') as f:
-                yaml.dump(c, f, allow_unicode=True)
-            print('✓ ดึง Cookies เริ่มต้นเรียบร้อยแล้ว!')
-    asyncio.run(fetch())
-" 2>/dev/null || true
 }
 
 # สกัดเอา URL ออกจากข้อความ (กรณีผู้ใช้ก็อปปี้มาทั้งข้อความแชร์จากแอป Douyin)
