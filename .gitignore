@@ -51,3 +51,10 @@ config/cookies.json
 .vscode/
 .omc/
 .gstack/
+
+# Media & runtime binaries
+*.mp4
+*.wav
+*.db-shm
+*.db-wal
+.env
