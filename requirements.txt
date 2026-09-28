@@ -6,6 +6,10 @@ rich>=13.7.0
 pyyaml>=6.0.1
 python-dateutil>=2.8.2
 gmssl>=3.2.2
+# LINE/TikTok automation sidecar.
+requests>=2.31.0
+python-dotenv>=1.0.0
+gTTS>=2.5.0
 # Content-aware resizing of baked-in yellow video captions.
 Pillow>=10.0
 # Bundled ffmpeg static binary for audio extraction before
